@@ -1,0 +1,26 @@
+.fadeIn
+{
+    opacity: 0;
+    animation: fadeInAnimation 0.5s ease-in forwards;
+}
+
+.moveRightToLeft
+{
+    animation: moveRightToLeftAnimation 0.5s ease-in forwards;
+}
+
+.fadeInFromRightToLeft
+{
+    opacity: 0;
+    animation: fadeInAnimation 0.5s ease-in forwards, moveRightToLeftAnimation 0.5s ease-in forwards;
+}
+
+@keyframes fadeInAnimation {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes moveRightToLeftAnimation {
+    from { transform: translateX(5%); }
+    to { transform: translateX(0); }
+}

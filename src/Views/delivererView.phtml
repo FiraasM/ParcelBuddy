@@ -1,0 +1,280 @@
+<?php
+require_once('../Models/PaginationFunctions.php');
+
+    if(isset($view->errors))
+    {
+        foreach($view->errors as $error)
+        {
+            echo"<div class='alert alert-danger border border-danger' role='alert'>"."<i class='bi bi-exclamation-triangle'></i>"."  $error  "."</div>";
+        }
+    }
+
+    if(isset($view->successes))
+    {
+        foreach($view->successes as $success)
+        {
+            echo"<div class='alert alert-success border border-success' role='alert'>"."<i class='bi bi-check-circle'></i>"."  $success  "."</div>";
+        }
+    }
+
+
+?>
+
+
+
+<div class="container">
+
+    <div class="row text-center justify-content-center"> NOTE: LOAD MORE RECORDS TO UPDATE THE MAP!</div>
+    <div id="map" class="row text-center"></div>
+
+    <div class="container" id="loadPreviousRecordButtonContainer">
+        <div id="loadPreviousRecordButtonRow" class="row mt-4 justify-content-center text-center">
+            <div id = "loadPreviousButton"></div>
+        </div>
+    </div>
+
+    <div id="recordView">
+        <div id="recordDisplay<?php echo $view->pageNumber ?>" class="row mt-4">
+            <?php foreach ($view->deliveries as $delivery): ?>
+            <div class="col-sm-6 col-md-4">
+                <div class="card m-2" >
+                    <div class="card-body">
+
+                        <h5 class="card-title">Delivery ID: <?php echo $delivery->getId()?></h5>
+
+                        <p class="card-text">Recipient Name: <?php echo $delivery->getName()?> </p>
+                        <p class="card-text">Address1: <?php echo $delivery->getAddress1()?> </p>
+                        <p class="card-text">Address2: <?php echo $delivery->getAddress2()?> </p>
+                        <p class="card-text">Postcode: <?php echo $delivery->getPostcode()?> </p>
+                        <p class="card-text">Latitude: <?php echo $delivery->getLatitude()?> </p>
+                        <p class="card-text">Longitude: <?php echo $delivery->getLongitude()?> </p>
+                        <p class="card-text">Status: <?php echo $delivery->getStatus()->getStatusText()?> </p>
+
+                        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#updateStatus<?php echo $delivery->getId()?>">Update Status</button>
+
+                    </div>
+                </div>
+            </div>
+            <?php endforeach; ?>
+
+
+            <?php foreach ($view->deliveries as $delivery): ?>
+                <!-- modal for updating delivery status -->
+                <div class="modal fade" id="updateStatus<?php echo $delivery->getId() ?>" tabindex="-1" aria-labelledby="update-status" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="update-status">Update delivery status</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+
+                            <div class="modal-body">
+                                <form action="<?php htmlentities($_SERVER["PHP_SELF"]);?>" method="post">
+
+                                    <div class="row mt-0 justify-content-center mb-3">
+                                        <div class="col-md-12">
+                                            <label for="deliveryStatus">Delivery Status</label>
+                                            <select class="form-select" id="deliveryStatus" name="deliveryStatus">
+                                                <?php $currentDeliveryStatusId = $delivery->getStatus()->getId() ?>
+                                                <?php foreach ($view->deliveryStatuses as $status):  ?>
+                                                    <?php if($status->getId() == $currentDeliveryStatusId): ?>
+                                                        <option selected value="<?php echo $delivery->getStatus()->getId() ?>"><?php echo $delivery->getStatus()->getStatusText() ?></option>
+                                                    <?php else: ?>
+                                                        <option value="<?php echo $status->getId() ?>"><?php echo $status->getStatusText() ?></option>
+                                                    <?php endif; ?>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+                                    </div>
+
+
+                                    <div class="modal-footer justify-content-center">
+                                        <button type="submit" class="btn btn-primary" name="updateDelivery" value="<?php echo $delivery->getId() ?>">Confirm</button>
+                                        <button type="button" class="btn btn-danger" data-bs-dismiss="modal" aria-label="Close">Cancel</button>
+                                    </div>
+
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</div>
+
+<div class="container mb-5" id="loadMoreButtonContainer">
+    <div id="loadMoreButtonRow" class="row mt-4 justify-content-center text-center">
+        <div id="loadMoreButton">
+            <button class="btn btn-primary" id="loadMore" value="2"> Load more</button>
+        </div>
+    </div>
+</div>
+
+<script src="../JS/Ajax.js"></script>
+<script src="../JS/MapController.js"></script>
+<script src="../JS/RecordViewController.js"></script>
+<script src="../JS/DeliveryStatuses.js"></script>
+
+<script>
+
+    let deliveryStatuses = new DeliveryStatuses("<?php echo $_SESSION['token'] ?>");
+    //How many batches of record can be displayed at once
+    let recordDisplayLimit = 2;
+
+    generateRecordDisplay = function (recordDisplayNumber, jsonData) {
+        let deliveryPoints = jsonData;
+        let recordDisplayHTML = '<div id="recordDisplay' + recordDisplayNumber + '" class="row mt-4">';
+        deliveryPoints.forEach(function (deliveryPoint) {
+            recordDisplayHTML +=
+                '<div class="col-sm-6 col-md-4"> <div class="card m-2"> <div class="card-body">' +
+                '<h5 class="card-title">Delivery ID: ' + deliveryPoint.id + '</h5>' +
+                '<p class="card-text">Recipient Name: ' + deliveryPoint.name + '</p>' +
+                '<p class="card-text">Address1: ' + deliveryPoint.address_1 + '</p>' +
+                '<p class="card-text">Address2: ' + deliveryPoint.address_2 + '</p>' +
+                '<p class="card-text">Postcode: ' + deliveryPoint.postcode + '</p>' +
+                '<p class="card-text">Latitude: ' + deliveryPoint.latitude + '</p>' +
+                '<p class="card-text">Longitude: ' + deliveryPoint.longitude + '</p>' +
+                '<p class="card-text">Status: ' + deliveryPoint.status.statusText + '</p>' +
+
+                '<button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#updateStatus' + deliveryPoint.id + '">Update Status</button>' +
+
+                '</div> </div> </div>' +
+                '<div class="modal fade" id="updateStatus' + deliveryPoint.id + '" tabindex="-1" aria-labelledby="update-status" aria-hidden="true">'+
+                    '<div class="modal-dialog">' +
+                        '<div class="modal-content">' +
+
+                            '<div class="modal-header">'+
+                                '<h5 class="modal-title" id="update-status">Update delivery status</h5>'+
+                                '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>'+
+                            '</div>' +
+
+                            '<div class="modal-body">' +
+                                '<form action="" method="post">' +
+
+                                    '<div class="row mt-0 justify-content-center mb-3">' +
+                                        '<div class="col-md-12">' +
+                                            '<label for="deliveryStatus">Delivery Status</label>'+
+                                            '<select class="form-select" id="deliveryStatus" name="deliveryStatus">';
+
+            deliveryStatuses.getStatuses().forEach((deliveryStatus) =>{
+                if(deliveryPoint.status.id === deliveryStatus.id){
+                    recordDisplayHTML += '<option selected value="' + deliveryStatus.id + '">' + deliveryStatus.statusText + '</option>';
+                }else{
+                    recordDisplayHTML += '<option  value="' + deliveryStatus.id + '">' + deliveryStatus.statusText + '</option>';
+                }
+            })
+
+            recordDisplayHTML += '</select> </div> </div>' +
+                '<div class="modal-footer justify-content-center">' +
+                '<button type="submit" class="btn btn-primary" name="updateDelivery" value="' + deliveryPoint.id + '">Confirm</button>' +
+                '<button type="button" class="btn btn-danger" data-bs-dismiss="modal" aria-label="Close">Cancel</button>' +
+                '</div></form></div></div></div></div>';
+
+
+
+        })
+        recordDisplayHTML += '</div>';
+        return recordDisplayHTML;
+    }
+
+
+
+    //set up the controller for record view
+    let recordViewController = new RecordViewController(recordDisplayLimit, generateRecordDisplay);
+
+    //Allows the user to load more data
+    recordViewController.getLoadMoreButton().addEventListener("click", loadNextRecordDisplay)
+
+
+    //Makes an AJAX request to retrieve the next few records to display
+    function loadNextRecordDisplay(){
+        recordViewController.showLoadingForLoadMoreButton();
+        let pageNumberToLoad = recordViewController.getCurrentPageNumber() + 1
+        let ajax = new Ajax();
+        ajax.sendRequest("GET", "../AJAX/ajaxDeliverersDeliveryPointsData.php?pageNumber=" + pageNumberToLoad + "&token=" + "<?php echo $_SESSION['token'] ?>", null,
+            function successCallBack(responseText){
+                let deliveryPoints = JSON.parse(responseText);
+                if(deliveryPoints.length !== 0) {
+                    recordViewController.appendRecord(deliveryPoints);
+                    fadeInFromRightToLeft("recordDisplay" + pageNumberToLoad);
+                    mapController.appendMarkersFor(deliveryPoints);
+                }
+                else
+                {
+                    recordViewController.hideLoadMoreButton();
+                }
+            },
+            function errorCallBack(){
+                console.log("RESPONSE ERROR!");
+            })
+
+    }
+
+    //Makes an AJAX request to retrieve the previous records to display
+    function loadPreviousRecordDisplay(){
+        recordViewController.showLoadingForPreviousButton();
+        let pageNumberToLoad = recordViewController.getFrontPageNumber() - 1;
+        let ajax = new Ajax();
+        ajax.sendRequest("GET", "../AJAX/ajaxDeliverersDeliveryPointsData.php?pageNumber=" + pageNumberToLoad + "&token=" + "<?php echo $_SESSION['token'] ?>", null,
+            function successCallBack(responseText){
+                let deliveryPoints = JSON.parse(responseText);
+                if(deliveryPoints.length !== 0) {
+                    recordViewController.prependRecord(deliveryPoints);
+                    fadeInFromRightToLeft("recordDisplay" + pageNumberToLoad);
+                    mapController.prependMarkersFor(deliveryPoints)
+                }
+                else
+                {
+                    recordViewController.hideLoadPreviousButton();
+                }
+            },
+            function errorCallBack(){
+                console.log("RESPONSE ERROR!");
+            })
+
+    }
+</script>
+
+
+<script>
+    let mapController = new MapController('map',[54, -2], 8,
+        function(deliveryPoint){
+            let markerText = "<p> ID: " + deliveryPoint.id + "</p>" +
+                "<p> Recipient: " + deliveryPoint.name + "</p>" +
+                "<p> Address1: " + deliveryPoint.address_1 + "</p>" +
+                "<p> Adddress2: " + deliveryPoint.address_2 + "</p>" +
+                "<p> Postcode: " + deliveryPoint.postcode + "</p>" +
+                "<p> Deliverer: " + deliveryPoint.deliverer.username + "</p>" +
+                "<p> Status: " + deliveryPoint.status.statusText + "</p>"
+
+           return L.marker([deliveryPoint.latitude, deliveryPoint.longitude]).addTo(mapController.getMap()).on('mouseover', event =>{
+                event.target.bindPopup(markerText).openPopup();
+            }).on('mouseout', event =>{
+                event.target.closePopup();
+            })
+        }, recordDisplayLimit);
+
+    onTileLoad = function()
+    {
+        let ajax = new Ajax();
+        ajax.sendRequest("GET", "../AJAX/ajaxDeliverersDeliveryPointsData.php?token=" + "<?php echo $_SESSION['token'] ?>", null,
+            function successCallBack(responseText){
+                let deliveryPoints = JSON.parse(responseText);
+                if(deliveryPoints.length !== 0) {
+                    mapController.appendMarkersFor(deliveryPoints)
+                }
+                else
+                {
+                    //Nothing will happen if there's no data
+                }
+            },
+            function errorCallBack(){
+                console.log("RESPONSE ERROR!");
+            })
+
+    }
+
+    mapController.initialise(onTileLoad);
+</script>

@@ -1,0 +1,393 @@
+<?php
+
+require_once('../Models/DeliveryUsersDataSet.php');
+require_once('../Models/DeliveryUser.php');
+require_once('../Models/DeliveryUserType.php');
+require_once('../Models/PaginationFunctions.php');
+
+if(isset($view->errors))
+{
+    foreach($view->errors as $error)
+    {
+        echo"<div class='alert alert-danger border border-danger' role='alert'>"."<i class='bi bi-exclamation-triangle'></i>"."  $error  "."</div>";
+    }
+}
+
+if(isset($view->successes))
+{
+    foreach($view->successes as $success)
+    {
+        echo"<div class='alert alert-success border border-success' role='alert'>"."<i class='bi bi-check-circle'></i>"."  $success  "."</div>";
+    }
+}
+?>
+
+
+
+<div class="container">
+    <div class="row text-center">
+        <div class="col-12">
+            <h3>User Records</h3>
+        </div>
+    </div>
+
+    <div class="row text-center">
+        <div class="col-12">
+            <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addUser">Add new user</button>
+        </div>
+    </div>
+
+
+
+
+    <div class="container" id="loadPreviousRecordButtonContainer">
+        <div id="loadPreviousRecordButtonRow" class="row mt-4 justify-content-center text-center">
+            <div id = "loadPreviousButton"></div>
+        </div>
+    </div>
+
+<div id="recordView">
+    <div id="recordDisplay<?php echo $view->pageNumber ?>" class="row mt-4">
+        <?php foreach ($view->users as $user): ?>
+        <div class="col-sm-6 col-md-4">
+            <div class="card m-2" >
+                <div class="card-body">
+
+                    <h5 class="card-title">User ID: <?php echo $user->getId()?></h5>
+
+                    <p class="card-text">Username: <?php echo $user->getUsername()?> </p>
+                    <p class="card-text">User Type: <?php echo $user->getUserType()->getUserTypeName()?> </p>
+
+
+
+                    <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteUser<?php echo $user->getId()?>">Delete</button>
+                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editUser<?php echo $user->getId()?>">Edit</button>
+                </div>
+            </div>
+        </div>
+
+
+            <div class="modal fade" id="deleteUser<?php echo $user->getId() ?>" tabindex="-1" aria-labelledby="delete-title" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="delete-title">Delete This User?</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+
+                        <div class="modal-body">
+                            <form action="<?php htmlentities($_SERVER["PHP_SELF"]);?>" method="post">
+                                <p class="text-center">Are you sure you would like to delete this user?</p>
+
+                                <div class="modal-footer justify-content-center">
+                                    <button type="submit" class="btn btn-primary" name="deleteUser" value="<?php echo $user->getId() ?>">Confirm</button>
+                                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal" aria-label="Close">Cancel</button>
+                                </div>
+
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="modal fade" id="editUser<?php echo $user->getId()?>" tabindex="-1" aria-labelledby="edit-title" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="edit-title">Edit User</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+
+                        <div class="modal-body">
+                            <form action="<?php htmlentities($_SERVER["PHP_SELF"]);?>" method="post">
+                                <div class="container">
+                                    <div class="row">
+
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label for="username">Username</label>
+                                                <input type="text" class="form-control" name="username" id="username" placeholder="Enter username" value="<?php echo $user->getUsername()?>" required>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label for="password">Password</label>
+                                                <input type="password" class="form-control" name="password" id="password" placeholder="Enter password (Optional)">
+                                            </div>
+                                        </div>
+
+                                        <div class="col-12">
+                                            <div class="form-group mt-3">
+
+                                                <label for="userType">User Type</label>
+                                                <select class="form-select" id="userType" name="userType">
+                                                    <?php if($user->getUserType()->getUserTypeName() == "Deliverer"):?>
+                                                    <option value="2">Deliverer</option>
+                                                    <option value="1">Manager</option>
+                                                    <?php else: ?>
+                                                    <option value="1">Manager</option>
+                                                    <option value="2">Deliverer</option>
+                                                    <?php endif; ?>
+                                                </select>
+
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal" aria-label="Close">Cancel</button>
+                                    <button type="submit" class="btn btn-primary" name="editUser" value="<?php echo $user->getId() ?>">Confirm</button>
+                                </div>
+
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+
+        <?php endforeach; ?>
+
+    </div>
+</div>
+
+</div>
+
+
+
+<div class="container" id="loadMoreButtonContainer">
+    <div id="loadMoreButtonRow" class="row mt-4 justify-content-center text-center">
+        <div id="loadMoreButton">
+            <button class="btn btn-primary" id="loadMore" value="2"> Load more</button>
+        </div>
+    </div>
+</div>
+
+
+
+
+<div class="modal fade" id="addUser" tabindex="-1" aria-labelledby="add-title" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title" id="add-title">Add User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <form action="<?php htmlentities($_SERVER["PHP_SELF"]);?>" method="post">
+                    <div class="container">
+                        <div class="row">
+
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="username">Username</label>
+                                    <input type="text" class="form-control" name="username" id="username" placeholder="Enter username" required>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="password">Password</label>
+                                    <input type="password" class="form-control" name="password" id="password" placeholder="Enter password" required>
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <div class="form-group mt-3">
+
+                                    <label for="userType">User Type</label>
+                                    <select class="form-select" id="userType" name="userType">
+                                        <option value="2">Deliverer</option>
+                                        <option value="1">Manager</option>
+                                    </select>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary" name="addUser">Add</button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="../JS/Ajax.js"></script>
+<script src="../JS/RecordViewController.js"></script>
+<script src="../JS/WindowController.js"></script>
+
+
+<script>
+
+    //Determines what a record display will look like
+    generateRecordDisplay = function (recordDisplayNumber, jsonData) {
+        let users = jsonData;
+        let recordDisplayHTML = '<div id="recordDisplay' + recordDisplayNumber + '" class="row mt-4">';
+        users.forEach(function (user) {
+            recordDisplayHTML +=
+                '<div class="col-sm-6 col-md-4"> <div class="card m-2"> <div class="card-body">' +
+                '<h5 class="card-title">User ID: ' + user.id + '</h5>' +
+                '<p class="card-text">Username: ' + user.username + '</p>' +
+                '<p class="card-text">User Type: ' + user.userType.userTypeName + '</p>' +
+                '<button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteUser' + user.id + '">Delete</button>' +
+                '<button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editUser' + user.id + '">Edit</button>' +
+
+                '</div> </div> </div>' +
+                '<div class="modal fade" id="deleteUser' + user.id + '" tabindex="-1" aria-labelledby="delete-title" aria-hidden="true">' +
+                '<div class="modal-dialog">' +
+                '<div class="modal-content">' +
+
+                '<div class="modal-header">' +
+                '<h5 class="modal-title" id="delete-title">Delete This User?</h5>' +
+                '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
+                '</div>' +
+
+                '<div class="modal-body">' +
+                '<form action="" method="post">' +
+
+                '<p class="text-center">Are you sure you would like to delete this user?</p>' +
+
+                '<div class="modal-footer justify-content-center">' +
+                '<button type="submit" class="btn btn-primary" name="deleteUser" value="' + user.id + '">Confirm</button>' +
+                '<button type="button" class="btn btn-danger" data-bs-dismiss="modal" aria-label="Close">Cancel</button>' +
+
+                '</div></form></div></div></div></div>' +
+
+                '<div class="modal fade" id="editUser' + user.id + '" tabindex="-1" aria-labelledby="edit-title" aria-hidden="true">' +
+                '<div class="modal-dialog">' +
+                '<div class="modal-content">' +
+
+                '<div class="modal-header">' +
+                '<h5 class="modal-title" id="edit-title">Edit User</h5>' +
+                '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
+                '</div>' +
+
+                '<div class="modal-body">' +
+                '<form class="form' + user.id + '" action="" method="post">' +
+                '<div class="container">' +
+                '<div class="row">' +
+
+                '<div class="col-md-6">' +
+                '<div class="form-group">'+
+                '<label for="username">Username</label>' +
+                '<input type="text" class="form-control" name="username" id="username" placeholder="Enter username" value="' + user.username + '" required>' +
+                '</div>' +
+                '</div>' +
+
+                '<div class="col-md-6">' +
+                '<div class="form-group">' +
+                '<label for="password">Password</label>' +
+                '<input type="password" class="form-control" name="password" id="password" placeholder="Enter password (Optional)">' +
+                '</div>' +
+                '</div>' +
+
+                '<div class="col-12">' +
+                '<div class="form-group mt-3">' +
+
+                '<label for="userType">User Type</label>' +
+                '<select class="form-select userType' + user.id  + '" id="userType" name="userType">';
+
+            if(user.userType.userTypeName === "Deliverer")
+            {
+                recordDisplayHTML += '<option value="2">Deliverer</option> <option value="1">Manager</option>';
+            }
+            else
+            {
+                recordDisplayHTML += '<option value="1">Manager</option><option value="2">Deliverer</option>'
+            }
+
+            recordDisplayHTML += '</select> </div> </div> </div> </div>' +
+
+                '<div class="modal-footer">' +
+                '<button type="button" class="btn btn-danger" data-bs-dismiss="modal" aria-label="Close">Cancel</button>' +
+                '<button type="submit" class="btn btn-primary" name="editUser" value="' + user.id  + '">Confirm</button>' + ' </div> </form></div></div></div></div>';
+
+        })
+
+        recordDisplayHTML += '</div>'
+
+        return recordDisplayHTML;
+    }
+
+
+
+    let recordDisplayLimit = 2; //How many batches of record can be displayed at once
+
+    //set up the controller for record view
+    let recordViewController = new RecordViewController(recordDisplayLimit, generateRecordDisplay);
+
+
+    //Allows the user to load more data
+    recordViewController.getLoadMoreButton().addEventListener("click", loadNextRecordDisplay)
+
+    //Makes an AJAX request to retrieve the next few records to display
+    function loadNextRecordDisplay(){
+        recordViewController.showLoadingForLoadMoreButton();
+        let pageNumberToLoad = recordViewController.getCurrentPageNumber() + 1
+        let ajax = new Ajax();
+        ajax.sendRequest("GET", "../AJAX/ajaxDeliveryUsersData.php?pageNumber=" + pageNumberToLoad + "&token=" + "<?php echo $_SESSION['token'] ?>", null,
+            function successCallBack(responseText){
+                let users = JSON.parse(responseText);
+                if(users.length !== 0) {
+                    recordViewController.appendRecord(users);
+                    fadeInFromRightToLeft("recordDisplay" + pageNumberToLoad)
+                }
+                else
+                {
+                    //If there is no more records to display
+                    recordViewController.hideLoadMoreButton();
+                }
+            },
+            function errorCallBack(){
+                recordViewController.showLoadMoreButton()
+            })
+
+    }
+
+    //Makes an AJAX request to retrieve the previous records to display
+    function loadPreviousRecordDisplay(){
+        recordViewController.showLoadingForPreviousButton();
+        let pageNumberToLoad = recordViewController.getFrontPageNumber() - 1;
+        let ajax = new Ajax();
+        ajax.sendRequest("GET", "../AJAX/ajaxDeliveryUsersData.php?pageNumber=" + pageNumberToLoad + "&token=" + "<?php echo $_SESSION['token'] ?>", null,
+            function successCallBack(responseText){
+                let users = JSON.parse(responseText);
+                if(users.length !== 0) {
+                    recordViewController.prependRecord(users);
+                    fadeInFromRightToLeft("recordDisplay" + pageNumberToLoad);
+                }
+                else
+                {
+                    //If there are no more previous records to display
+                    recordViewController.hideLoadPreviousButton();
+                }
+            },
+            function errorCallBack(){
+                recordViewController.showLoadPreviousButton()
+            })
+
+    }
+
+
+
+
+
+</script>
+
+
+
+
+
+

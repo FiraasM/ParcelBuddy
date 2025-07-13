@@ -1,0 +1,16 @@
+#map
+{
+    height: 400px;
+
+}
+
+
+.invisible
+{
+    visibility: hidden;
+}
+
+#markScheme
+{
+    display: block;
+}

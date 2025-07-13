@@ -1,0 +1,607 @@
+<?php
+require_once('../Models/DeliveryPointsDataSet.php');
+require_once('../Models/DeliveryStatusesDataSet.php');
+require_once('../Models/DeliveryUsersDataSet.php');
+
+require_once('../Models/DeliveryPoint.php');
+require_once('../Models/DeliveryUser.php');
+require_once('../Models/DeliveryStatus.php');
+require_once('../Models/PaginationFunctions.php');
+
+if(isset($view->errors))
+{
+    foreach($view->errors as $error)
+    {
+        echo"<div class='alert alert-danger border border-danger' role='alert'>"."<i class='bi bi-exclamation-triangle'></i>"."  $error  "."</div>";
+    }
+}
+
+if(isset($view->successes))
+{
+    foreach($view->successes as $success)
+    {
+        echo"<div class='alert alert-success border border-success' role='alert'>"."<i class='bi bi-check-circle'></i>"."  $success  "."</div>";
+    }
+}
+?>
+
+
+<div class="container">
+    <div class="row text-center">
+        <div class="col-12">
+            <h3>Delivery Records</h3>
+        </div>
+    </div>
+
+    <div class="row text-center mb-5">
+        <div class="col-12">
+            <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addDelivery">Add new delivery</button>
+        </div>
+    </div>
+
+
+
+    <div class="row text-center justify-content-center"> NOTE: LOAD MORE RECORDS TO UPDATE THE MAP!</div>
+    <div id="map" class="row text-center"></div>
+
+    <div class="container" id="loadPreviousRecordButtonContainer">
+        <div id="loadPreviousRecordButtonRow" class="row mt-4 justify-content-center text-center">
+            <div id = "loadPreviousButton"></div>
+        </div>
+    </div>
+
+    <div id="recordView">
+        <div id="recordDisplay<?php echo $view->pageNumber ?>" class="row mt-4">
+            <?php foreach ($view->deliveries as $delivery): ?>
+            <div class="col-sm-6 col-md-4">
+                <div class="card m-2" >
+                    <div class="card-body">
+
+                        <h5 class="card-title">Delivery ID: <?php echo $delivery->getId()?></h5>
+
+                        <p class="card-text">Recipient Name: <?php echo $delivery->getName()?> </p>
+                        <p class="card-text">Address1: <?php echo $delivery->getAddress1()?> </p>
+                        <p class="card-text">Address2: <?php echo $delivery->getAddress2()?> </p>
+                        <p class="card-text">Postcode: <?php echo $delivery->getPostcode()?> </p>
+                        <?php if($delivery->getDeliverer() == null):?>
+                        <p class="card-text">Deliverer: Not Assigned! </p>
+                        <?php else: ?>
+                        <p class="card-text">Deliverer: <?php echo $delivery->getDeliverer()->getUsername() ?> </p>
+                        <?php endif; ?>
+                        <p class="card-text">Latitude: <?php echo $delivery->getLatitude()?> </p>
+                        <p class="card-text">Longitude: <?php echo $delivery->getLongitude()?> </p>
+                        <p class="card-text">Status: <?php echo $delivery->getStatus()->getStatusText()?> </p>
+
+                        <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteDelivery<?php echo $delivery->getId()?>">Delete</button>
+                        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editDelivery<?php echo $delivery->getId()?>">Edit</button>
+                    </div>
+                </div>
+            </div>
+
+                <!-- modal for deleting delivery -->
+                <div class="modal fade" id="deleteDelivery<?php echo $delivery->getId() ?>" tabindex="-1" aria-labelledby="delete-title" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="delete-title">Delete This Delivery?</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+
+                            <div class="modal-body">
+                                <form action="<?php htmlentities($_SERVER["PHP_SELF"]);?>" method="post">
+                                    <p class="text-center">Are you sure you would like to delete this Delivery?</p>
+
+                                    <div class="modal-footer justify-content-center">
+                                        <button type="submit" class="btn btn-primary" name="deleteDelivery" value="<?php echo $delivery->getId() ?>">Confirm</button>
+                                        <button type="button" class="btn btn-danger" data-bs-dismiss="modal" aria-label="Close">Cancel</button>
+                                    </div>
+
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            <?php endforeach; ?>
+
+
+    <?php
+        $deliverersOptions = "";
+        foreach($view->deliverers as $deliverer)
+        {
+            $deliverersOptions .= "<option value=". $deliverer->getId() . ">" . $deliverer->getUsername()."</option>";
+        }
+
+    ?>
+
+    <?php foreach ($view->deliveries as $delivery): ?>
+
+        <!-- modal for editing delivery -->
+        <div class="modal fade" id="editDelivery<?php echo $delivery->getId()?>" tabindex="-1" aria-labelledby="edit-title" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="edit-title">Edit Delivery</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+
+                    <div class="modal-body">
+                        <form action="<?php htmlentities($_SERVER["PHP_SELF"]);?>" method="post">
+                            <div class="container">
+                                <div class="row">
+
+                                    <div class="col-12">
+                                        <div class="form-group">
+                                            <label for="name">Recipient Name</label>
+                                            <input type="text" class="form-control" name="name" id="name" placeholder="Enter Recipient Name" value="<?php echo $delivery->getName() ?>" required>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row mt-2">
+
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="address1">Address1</label>
+                                            <input type="text" class="form-control" name="address1" id="address1" placeholder="House, Street name" value="<?php echo $delivery->getAddress1() ?>" required>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="address2">Address2</label>
+                                            <input type="text" class="form-control" name="address2" id="address2" placeholder="City" value="<?php echo $delivery->getAddress2() ?>" required>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row mt-2">
+
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="latitude">Latitude</label>
+                                            <input type="text" class="form-control" name="latitude" id="latitude" placeholder="e.g 52.354965" value="<?php echo $delivery->getLatitude() ?>" required>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="longitude">Longitude</label>
+                                            <input type="text" class="form-control" name="longitude" id="longitude" placeholder="e.g -2.654984" value="<?php echo $delivery->getLongitude() ?>" required>
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                                <div class="row mt-2">
+                                    <div class="col-md-12">
+                                        <div class="form-group">
+                                            <label for="postcode">Postcode</label>
+                                            <input type="text" class="form-control" name="postcode" id="postcode" placeholder="Enter Postcode" value="<?php echo $delivery->getPostcode() ?>" required>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row mt-2">
+                                    <div class="col-md-6">
+                                        <label for="deliveryStatus">Delivery Status</label>
+                                        <select class="form-select" id="deliveryStatus" name="deliveryStatus">
+                                            <?php $currentDeliveryStatusId = $delivery->getStatus()->getId() ?>
+                                            <?php foreach ($view->deliveryStatuses as $status):  ?>
+                                                <?php if($status->getId() == $currentDeliveryStatusId): ?>
+                                                    <option selected value="<?php echo $delivery->getStatus()->getId() ?>"><?php echo $delivery->getStatus()->getStatusText() ?></option>
+                                                <?php else: ?>
+                                                    <option value="<?php echo $status->getId() ?>"><?php echo $status->getStatusText() ?></option>
+                                                <?php endif; ?>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label for="deliverer">Deliverer</label>
+                                        <select class="form-select" id="deliverer" name="deliverer" required>
+                                            <option selected value="<?php echo $delivery->getDeliverer()->getId() ?>"><?php echo $delivery->getDeliverer()->getUsername()?></option>
+                                            <?php echo($deliverersOptions) ?>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-danger" data-bs-dismiss="modal" aria-label="Close">Cancel</button>
+                                <button type="submit" class="btn btn-primary" name="editDelivery" value="<?php echo $delivery->getId() ?>">Confirm</button>
+                            </div>
+
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+<?php endforeach; ?>
+        </div>
+        </div>
+</div>
+
+<div class="container mb-5" id="loadMoreButtonContainer">
+    <div id="loadMoreButtonRow" class="row mt-4 justify-content-center text-center">
+        <div id="loadMoreButton">
+            <button class="btn btn-primary" id="loadMore" value="2"> Load more</button>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- modal for adding delivery -->
+<div class="modal fade" id="addDelivery" tabindex="-1" aria-labelledby="add-title" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title" id="add-title">Add User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <form action="<?php htmlentities($_SERVER["PHP_SELF"]);?>" method="post">
+                    <div class="container">
+                        <div class="row">
+
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <label for="name">Recipient Name</label>
+                                    <input type="text" class="form-control" name="name" id="name" placeholder="Enter Recipient Name" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mt-2">
+
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="address1">Address1</label>
+                                    <input type="text" class="form-control" name="address1" id="address1" placeholder="House, Street name" required>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="address2">Address2</label>
+                                    <input type="text" class="form-control" name="address2" id="address2" placeholder="City" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mt-2">
+
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="latitude">Latitude</label>
+                                    <input type="text" class="form-control" name="latitude" id="latitude" placeholder="e.g 52.354965" required>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="longitude">Longitude</label>
+                                    <input type="text" class="form-control" name="longitude" id="longitude" placeholder="e.g -2.654984" required>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <div class="row mt-2">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label for="postcode">Postcode</label>
+                                    <input type="text" class="form-control" name="postcode" id="postcode" placeholder="Enter Postcode" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mt-2">
+                            <div class="col-md-6">
+                                <label for="deliveryStatus">Delivery Status</label>
+                                <select class="form-select" id="deliveryStatus" name="deliveryStatus">
+                                    <option value="1">Label created</option>
+                                    <option value="2">Shipped</option>
+                                    <option value="3">Out for delivery</option>
+                                    <option value="4">Delivered</option>
+                                    <option value="5">Exception</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="deliverer">Deliverer</label>
+                                <select class="form-select" id="deliverer" name="deliverer">
+                                    <?php foreach($view->deliverers as $deliverer): ?>
+                                    <option value="<?php echo $deliverer->getId() ?>"><?php echo $deliverer->getUsername()?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+
+
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary" name="addDelivery">Add</button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script src="../JS/Ajax.js"></script>
+<script src="../JS/MapController.js"></script>
+<script src="../JS/RecordViewController.js"></script>
+<script src="../JS/DeliveryStatuses.js"></script>
+
+<script>
+    let recordDisplayLimit = 2;
+    let mapController = new MapController('map',[54, -2], 8,
+    function(deliveryPoint){
+        let markerText = "<p> ID: " + deliveryPoint.id + "</p>" +
+                            "<p> Recipient: " + deliveryPoint.name + "</p>" +
+                            "<p> Address1: " + deliveryPoint.address_1 + "</p>" +
+                            "<p> Adddress2: " + deliveryPoint.address_2 + "</p>" +
+                            "<p> Postcode: " + deliveryPoint.postcode + "</p>" +
+                            "<p> Deliverer: " + deliveryPoint.deliverer.username + "</p>" +
+                            "<p> Status: " + deliveryPoint.status.statusText + "</p>"
+
+        return L.marker([deliveryPoint.latitude, deliveryPoint.longitude]).addTo(mapController.getMap()).on('mouseover', event =>{
+            event.target.bindPopup(markerText).openPopup();
+        }).on('mouseout', event =>{
+            event.target.closePopup();
+        })
+    }, recordDisplayLimit);
+
+    onTileLoad = function()
+    {
+        let ajax = new Ajax();
+        ajax.sendRequest("GET", "../AJAX/ajaxDeliveryPointsData.php?token=" + "<?php echo $_SESSION['token'] ?>", null,
+            function successCallBack(responseText){
+                let deliveryPoints = JSON.parse(responseText);
+                if(deliveryPoints.length !== 0) {
+                    mapController.appendMarkersFor(deliveryPoints)
+                }
+                else
+                {
+                    //Nothing will happen if there's no data
+                }
+            },
+            function errorCallBack(){
+                console.log("RESPONSE ERROR!");
+            })
+
+    }
+
+    mapController.initialise(onTileLoad);
+
+
+</script>
+
+
+<script>
+let deliveryStatuses = new DeliveryStatuses("<?php echo $_SESSION['token'] ?>");
+
+    //Determines what a record display will look like
+    generateRecordDisplay = function (recordDisplayNumber, jsonData) {
+        let deliveryPoints = jsonData;
+        <?php
+        $deliverersOptions = "";
+        foreach($view->deliverers as $deliverer)
+        {
+            $deliverersOptions .= "<option value=". $deliverer->getId() . ">" . $deliverer->getUsername()."</option>";
+        }
+
+        ?>
+        let recordDisplayHTML = '<div id="recordDisplay' + recordDisplayNumber + '" class="row mt-4">';
+        deliveryPoints.forEach(function (deliveryPoint) {
+            recordDisplayHTML +=
+                '<div class="col-sm-6 col-md-4"> <div class="card m-2"> <div class="card-body">' +
+                '<h5 class="card-title">Delivery ID: ' + deliveryPoint.id + '</h5>' +
+                '<p class="card-text">Recipient Name: ' + deliveryPoint.name + '</p>' +
+                '<p class="card-text">Address1: ' + deliveryPoint.address_1 + '</p>' +
+                '<p class="card-text">Address2: ' + deliveryPoint.address_2 + '</p>' +
+                '<p class="card-text">Postcode: ' + deliveryPoint.postcode + '</p>' +
+                '<p class="card-text">Deliverer: ' + deliveryPoint.deliverer.username + '</p>' +
+                '<p class="card-text">Latitude: ' + deliveryPoint.latitude + '</p>' +
+                '<p class="card-text">Longitude: ' + deliveryPoint.longitude + '</p>' +
+                '<p class="card-text">Status: ' + deliveryPoint.status.statusText + '</p>' +
+                '<button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteDelivery' + deliveryPoint.id + '">Delete</button>' +
+                '<button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editDelivery' + deliveryPoint.id + '">Edit</button>' +
+
+                '</div> </div> </div>' +
+
+                '<div class="modal fade" id ="deleteDelivery' + deliveryPoint.id + '" tabindex="-1" aria-labelledby="delete-title" aria-hidden="true">' +
+                    '<div class="modal-dialog">' +
+                        ' <div class="modal-content">' +
+
+                            '<div class="modal-header">' +
+                                '<h5 class="modal-title" id="delete-title">Delete This Delivery?</h5>' +
+                                '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
+                            '</div>' +
+
+                        '<div class="modal-body">' +
+                            ' <form action="" method="post">' +
+                                '<p class="text-center">Are you sure you would like to delete this Delivery?</p>' +
+
+                                '<div class="modal-footer justify-content-center">' +
+                                    '<button type="submit" class="btn btn-primary" name="deleteDelivery" value="' + deliveryPoint.id + '">Confirm</button>' +
+                                    '<button type="button" class="btn btn-danger" data-bs-dismiss="modal" aria-label="Close">Cancel</button>' +
+                                '</div>' +
+                            '</form>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>'+
+
+
+            '<div class="modal fade" id="editDelivery' + deliveryPoint.id + '" tabindex="-1" aria-labelledby="edit-title" aria-hidden="true">' +
+                ' <div class="modal-dialog">' +
+                    '<div class="modal-content">' +
+
+                        '<div class="modal-header">'+
+                            '<h5 class="modal-title" id="edit-title">Edit Delivery</h5>' +
+                             '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
+                        '</div>' +
+
+                        '<div class="modal-body">' +
+                            '<form action="" method="post">' +
+                                '<div class="container">' +
+                                    '<div class="row">'+
+                                        '<div class="col-12">'+
+                                            '<div class="form-group">'+
+                                                '<label for="name">Recipient Name</label>' +
+                                                '<input type="text" class="form-control" name="name" id="name" placeholder="Enter Recipient Name" value="' + deliveryPoint.name + '" required>' +
+                                            '</div>' +
+                                        '</div>' +
+                                    '</div>' +
+
+                                    '<div class="row mt-2">' +
+                                        '<div class="col-md-6">' +
+                                            '<div class="form-group">' +
+                                                '<label for="address1">Address1</label>' +
+                                                '<input type="text" class="form-control" name="address1" id="address1" placeholder="House, Street name" value="' + deliveryPoint.address_1 + '" required>' +
+                                            '</div>' +
+                                        '</div>' +
+
+                                    '<div class="col-md-6">' +
+                                        '<div class="form-group">' +
+                                            '<label for="address2">Address2</label>' +
+                                            '<input type="text" class="form-control" name="address2" id="address2" placeholder="City" value="' + deliveryPoint.address_2 + '" required>' +
+                                        '</div>' +
+                                    '</div>' +
+                                '</div>' +
+
+                                '<div class="row mt-2">' +
+
+                                    '<div class="col-md-6">' +
+                                        '<div class="form-group">' +
+                                            '<label for="latitude">Latitude</label>' +
+                                            '<input type="text" class="form-control" name="latitude" id="latitude" placeholder="e.g 52.354965" value="' + deliveryPoint.latitude + '" required>' +
+                                        '</div>' +
+                                    '</div>' +
+
+                                    '<div class="col-md-6">' +
+                                        '<div class="form-group">' +
+                                            '<label for="longitude">Longitude</label>' +
+                                            '<input type="text" class="form-control" name="longitude" id="longitude" placeholder="e.g -2.654984" value="' + deliveryPoint.longitude + '" required>' +
+                                        '</div>' +
+                                    '</div>' +
+
+                                '</div>' +
+
+                                '<div class="row mt-2">' +
+
+                                    '<div class="col-md-12">' +
+                                        '<div class="form-group">' +
+                                            '<label for="postcode">Postcode</label>' +
+                                            '<input type="text" class="form-control" name="postcode" id="postcode" placeholder="Enter Postcode" value="' + deliveryPoint.postcode + '" required>' +
+                                        '</div>' +
+                                    '</div>' +
+
+                                '</div>' +
+
+                                '<div class="row mt-2">' +
+                                    '<div class="col-md-6">' +
+                                        '<label for="deliveryStatus">Delivery Status</label>' +
+                                        '<select class="form-select" id="deliveryStatus" name="deliveryStatus">';
+
+                                    deliveryStatuses.getStatuses().forEach((deliveryStatus) =>{
+                                        if(deliveryPoint.status.id === deliveryStatus.id){
+                                            recordDisplayHTML += '<option selected value="' + deliveryStatus.id + '">' + deliveryStatus.statusText + '</option>';
+                                        }else{
+                                            recordDisplayHTML += '<option  value="' + deliveryStatus.id + '">' + deliveryStatus.statusText + '</option>';
+                                        }
+                                    })
+
+
+            recordDisplayHTML += '</select>' +
+                            '</div>' +
+
+                        '<div class="col-md-6">' +
+                            '<label for="deliverer">Deliverer</label>' +
+                            '<select class="form-select" id="deliverer" name="deliverer" required>' +
+                                '<option selected value="' + deliveryPoint.deliverer.id + '">' + deliveryPoint.deliverer.username + '</option>' +
+                                '<?php echo($deliverersOptions) ?>'+
+                            '</select>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+            '<div class="modal-footer">' +
+                '<button type="button" class="btn btn-danger" data-bs-dismiss="modal" aria-label="Close">Cancel</button>' +
+                '<button type="submit" class="btn btn-primary" name="editDelivery" value="' + deliveryPoint.id + '">Confirm</button>' +
+            '</div></form></div></div></div></div>';
+
+
+
+        })
+        recordDisplayHTML += '</div>'
+        return recordDisplayHTML;
+    }
+
+
+
+    //set up the controller for record view
+    let recordViewController = new RecordViewController(recordDisplayLimit, generateRecordDisplay);
+
+    //Allows the user to load more data
+    recordViewController.getLoadMoreButton().addEventListener("click", loadNextRecordDisplay)
+
+
+    //Makes an AJAX request to retrieve the next few records to display
+    function loadNextRecordDisplay(){
+        recordViewController.showLoadingForLoadMoreButton();
+        let pageNumberToLoad = recordViewController.getCurrentPageNumber() + 1
+        let ajax = new Ajax();
+        ajax.sendRequest("GET", "../AJAX/ajaxDeliveryPointsData.php?pageNumber=" + pageNumberToLoad + "&token=" + "<?php echo $_SESSION['token'] ?>", null,
+            function successCallBack(responseText){
+                let deliveryPoints = JSON.parse(responseText);
+                if(deliveryPoints.length !== 0) {
+                    recordViewController.appendRecord(deliveryPoints);
+                    fadeInFromRightToLeft("recordDisplay" + pageNumberToLoad);
+                    mapController.appendMarkersFor(deliveryPoints);
+                }
+                else
+                {
+                    recordViewController.hideLoadMoreButton();
+                }
+            },
+            function errorCallBack(){
+                console.log("RESPONSE ERROR!");
+            })
+
+    }
+
+    //Makes an AJAX request to retrieve the previous records to display
+    function loadPreviousRecordDisplay(){
+        recordViewController.showLoadingForPreviousButton();
+        let pageNumberToLoad = recordViewController.getFrontPageNumber() - 1;
+        let ajax = new Ajax();
+        ajax.sendRequest("GET", "../AJAX/ajaxDeliveryPointsData.php?pageNumber=" + pageNumberToLoad + "&token=" + "<?php echo $_SESSION['token'] ?>", null,
+            function successCallBack(responseText){
+                let deliveryPoints = JSON.parse(responseText);
+                if(deliveryPoints.length !== 0) {
+                    recordViewController.prependRecord(deliveryPoints);
+                    fadeInFromRightToLeft("recordDisplay" + pageNumberToLoad);
+                    mapController.prependMarkersFor(deliveryPoints)
+                }
+                else
+                {
+                    recordViewController.hideLoadPreviousButton();
+                }
+            },
+            function errorCallBack(){
+                console.log("RESPONSE ERROR!");
+            })
+
+    }
+</script>
